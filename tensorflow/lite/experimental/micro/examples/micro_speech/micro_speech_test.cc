@@ -26,12 +26,14 @@ limitations under the License.
 TF_LITE_MICRO_TESTS_BEGIN
 
 TF_LITE_MICRO_TEST(TestInvoke) {
+  printf("==== micro_speech_test invoked ==== \n\n");
   // Set up logging.
   tflite::MicroErrorReporter micro_error_reporter;
   tflite::ErrorReporter* error_reporter = &micro_error_reporter;
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
+  printf("get g_tiny_conv_model_data\n");
   const tflite::Model* model = ::tflite::GetModel(g_tiny_conv_model_data);
   if (model->version() != TFLITE_SCHEMA_VERSION) {
     error_reporter->Report(
@@ -40,15 +42,18 @@ TF_LITE_MICRO_TEST(TestInvoke) {
         model->version(), TFLITE_SCHEMA_VERSION);
   }
 
+
   // This pulls in all the operation implementations we need.
   tflite::ops::micro::AllOpsResolver resolver;
 
+  printf("create area in memory for tensor\n");
   // Create an area of memory to use for input, output, and intermediate arrays.
   const int tensor_arena_size = 10 * 1024;
   uint8_t tensor_arena[tensor_arena_size];
   tflite::SimpleTensorAllocator tensor_allocator(tensor_arena,
                                                  tensor_arena_size);
 
+  printf("build interpreter\n");
   // Build an interpreter to run the model with.
   tflite::MicroInterpreter interpreter(model, resolver, &tensor_allocator,
                                        error_reporter);
@@ -64,6 +69,7 @@ TF_LITE_MICRO_TEST(TestInvoke) {
   TF_LITE_MICRO_EXPECT_EQ(43, input->dims->data[2]);
   TF_LITE_MICRO_EXPECT_EQ(kTfLiteUInt8, input->type);
 
+  printf("**** Copy a spectrogram created from a .wav audio into memory of someone saying YES **** \n\n");
   // Copy a spectrogram created from a .wav audio file of someone saying "Yes",
   // into the memory area used for the input.
   const uint8_t* yes_features_data = g_yes_f2e59fea_nohash_1_data;
@@ -71,12 +77,15 @@ TF_LITE_MICRO_TEST(TestInvoke) {
     input->data.uint8[i] = yes_features_data[i];
   }
 
+  printf("**** Run the model ****\n");
   // Run the model on this input and make sure it succeeds.
   TfLiteStatus invoke_status = interpreter.Invoke();
+  printf("Check if model run worked\n");
   if (invoke_status != kTfLiteOk) {
     error_reporter->Report("Invoke failed\n");
   }
   TF_LITE_MICRO_EXPECT_EQ(kTfLiteOk, invoke_status);
+  printf("\n==== Model run complete ====\n");
 
   // Get the output from the model, and make sure it's the expected size and
   // type.
@@ -92,6 +101,8 @@ TF_LITE_MICRO_TEST(TestInvoke) {
   const int kYesIndex = 2;
   const int kNoIndex = 3;
 
+  printf("\nModel has 4 scores : kSilenceIndex | kUnknownIndex | kYesIndex | kNoIndex\n");
+
   // Make sure that the expected "Yes" score is higher than the other classes.
   uint8_t silence_score = output->data.uint8[kSilenceIndex];
   uint8_t unknown_score = output->data.uint8[kUnknownIndex];
@@ -100,7 +111,14 @@ TF_LITE_MICRO_TEST(TestInvoke) {
   TF_LITE_MICRO_EXPECT_GT(yes_score, silence_score);
   TF_LITE_MICRO_EXPECT_GT(yes_score, unknown_score);
   TF_LITE_MICRO_EXPECT_GT(yes_score, no_score);
+  
+  printf("\nkSilenceIndex = %d\n", silence_score);
+  printf("kUnknownIndex= %d\n", unknown_score);
+  printf("kYesIndex = %d\n", yes_score);
+  printf("kNoIndex = %d\n\n", no_score);
 
+
+  printf("\n==== Load the new spectrogram created from a .wav audio into memory of someone saying NO ====\n");
   // Now test with a different input, from a recording of "No".
   const uint8_t* no_features_data = g_no_f9643d42_nohash_4_data;
   for (int i = 0; i < input->bytes; ++i) {
@@ -130,8 +148,12 @@ TF_LITE_MICRO_TEST(TestInvoke) {
   TF_LITE_MICRO_EXPECT_GT(no_score, silence_score);
   TF_LITE_MICRO_EXPECT_GT(no_score, unknown_score);
   TF_LITE_MICRO_EXPECT_GT(no_score, yes_score);
+  printf("\nkSilenceIndex = %d\n", silence_score);
+  printf("kUnknownIndex= %d\n", unknown_score);
+  printf("kYesIndex = %d\n", yes_score);
+  printf("kNoIndex = %d\n\n", no_score);
 
-  error_reporter->Report("Ran successfully\n");
+  error_reporter->Report("\nRan successfully\n");
 }
 
 TF_LITE_MICRO_TESTS_END

@@ -95,7 +95,9 @@ MICROLITE_CC_SRCS := $(filter-out $(MICROLITE_TEST_SRCS), $(MICROLITE_CC_BASE_SR
 # CXXFLAGS or LIBS to work for a specific targetted architecture. All logic
 # based on platforms or architectures should happen within these files, to
 # keep this main makefile focused on the sources and dependencies.
-include $(wildcard $(MAKEFILE_DIR)/targets/*_makefile.inc)
+#include $(wildcard $(MAKEFILE_DIR)/targets/*_makefile.inc)
+TARGET_ARCH := riscv32_mcu
+TARGET_TOOLCHAIN_PREFIX := /home/rt/Documents/R_T/Github/linux_cva6/cva6-sdk/buildroot/output/host/bin/riscv32-buildroot-linux-gnu-
 
 ALL_SRCS := \
 	$(MICRO_SPEECH_TEST_SRCS) \
